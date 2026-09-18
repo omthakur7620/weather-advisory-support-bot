@@ -362,15 +362,47 @@ The app was manually validated against these scenarios:
 - **No-SOP scenario:** "Can I do outdoor photography in Pune?" states no configured SOP applies rather than inventing advice.
 - **Adversarial scenario:** an attempt to override configured SOP rules via prompt does not bypass policy evaluation.
 
-## 17. Failure Handling
+## 17. Challenges I Faced During Development
 
-The system deliberately fails safely:
+Building this wasn't a straight line. A few real issues came up along the way, and each one taught me something about a gap between how I designed the system on paper and how it actually behaved.
 
-- **Ambiguous request:** routes to a clarification response instead of guessing.
-- **Location failure:** never invents coordinates if geocoding fails.
-- **Weather API failure:** never produces a fabricated forecast.
-- **No applicable SOP:** explicitly communicates that no policy-based guidance exists.
-- **Missing forecast time:** never guesses a future forecast timestamp.
+**Ambiguous user language.** A request like "What about Tamhini Ghat ride for tonight?" doesn't map cleanly to a policy. "Ride" could mean cycling, a motorcycle, or a car, and guessing wrong means matching the wrong SOP. I had to build in a clarification path for when the activity can't be reliably determined, instead of forcing a guess. This also made session memory necessary: a follow-up like "What about this evening?" only makes sense if the previous activity and location are still held in context.
+
+**Time expressions don't map directly to weather data.** Words like "today," "this evening," "tonight," or "tomorrow" can't be passed straight into a weather API call. I had to resolve these into a concrete target timestamp using the location's timezone before pulling weather data, so the policy check is always based on an actual observation or forecast, not a loose interpretation of the wording.
+
+**Letting the LLM pick the policy was a mistake I avoided.** Early on it was tempting to let the model decide which SOP "sounded" relevant. I moved away from that because it would make the same weather conditions produce different outcomes on different runs, which is impossible to audit. I moved policy matching into deterministic YAML-based conditions instead, so the LLM only explains a decision it didn't make.
+
+**The bot's responses started sounding repetitive.** During testing, I noticed the model kept reusing similar phrasing across different policy outcomes. This was a real problem, not a minor style issue: it made the bot feel mechanical and undermined trust in the responses even when the underlying decision was correct. It taught me that correctness and response quality are separate concerns. I ended up treating the response composer strictly as a presentation layer, so it has room to vary its wording without ever being allowed to reinterpret or soften the actual policy decision.
+
+**Model output isn't always what it looks like.** During evaluation, the model returned an SOP identifier using a visually identical but technically different Unicode character in place of a plain ASCII hyphen. It looked correct on screen but failed exact-match checks against the SOP ID stored in the YAML. That was a good lesson: anything meant to be machine-verifiable can't be trusted to free-form model output alone. I fixed this by keeping the canonical policy reference explicit and separate from the generated text.
+
+**Live weather makes testing inherently unstable.** A policy that matches at one moment might not match minutes later because the forecast changed. I had to separate two different kinds of testing: verifying the deterministic policy logic against fixed weather values, versus verifying the full pipeline against live Open-Meteo data. They answer different questions, and conflating them would have given me false confidence.
+
+**The UI surfaced problems the backend tests didn't.** A component could work perfectly in isolation while the actual chat experience still felt repetitive or unclear. Running things through the Streamlit interface ended up being part of validating the whole system, not just a cosmetic layer on top of it.
+
+ ## Why This Isn't Vibe-Coded
+
+The core decision I made early was to separate four concerns: **language understanding**, **weather retrieval**, **policy evaluation**, and **response generation**, so that the LLM is never the one deciding whether an activity is safe. That decision shaped almost everything else in the codebase.
+
+I know exactly which parts of this system are deterministic and which are model-driven, and why:
+
+| Responsibility | Approach |
+|---|---|
+| Understanding natural-language intent | LLM |
+| Detecting ambiguity / need for clarification | LLM + application rules |
+| Resolving location | Open-Meteo geocoding |
+| Resolving requested time | Deterministic application logic |
+| Retrieving weather | Open-Meteo |
+| Evaluating SOP conditions | Deterministic Python logic |
+| Selecting the applicable SOP | Deterministic policy resolution |
+| Writing the final response | LLM |
+| Policy traceability | Application-enforced |
+
+This isn't an accident of how the code turned out. It's a deliberate line I drew: the model gets flexibility over language, and the application code keeps control over anything that needs to be reproducible and auditable.
+
+If asked to walk through this in review, I'd start from the user's message and follow it through the graph state rather than jumping between files, because that's genuinely how I think about the system. The questions I designed around were: what does the user actually mean, do we have enough to act on it, what exact location and time are we evaluating, what weather data belongs to that request, which SOP conditions are satisfied, how do we pick one policy when several could apply, and how do we trace the final response back to the decision that produced it.
+
+I didn't try to build the largest possible agent here. I built something smaller on purpose, specifically so that every important decision in it has a clear owner and I can explain it without hand-waving.
 
 ## 18. Adding a New SOP
 
