@@ -1,0 +1,352 @@
+version: "1.0"
+
+metadata:
+  name: "Weather Advisory Policies"
+  description: "Business-controlled weather safety policies for outdoor activities."
+  disclaimer: "These policies are illustrative policies created for this assignment and are not medical, emergency, or professional safety guidance."
+
+severity_priority:
+  - critical
+  - high
+  - moderate
+  - low
+
+sops:
+
+  # ============================================================
+  # CATEGORY: OUTDOOR EXERCISE
+  # ============================================================
+
+  - id: "SOP-CYCLE-WIND-01"
+    name: "Cycling in High Winds"
+    category: "outdoor_exercise"
+    severity: "high"
+    priority: 100
+
+    applies_when:
+      all:
+        - field: "activity"
+          operator: "equals"
+          value: "cycling"
+
+        - field: "weather.wind_speed_kmh"
+          operator: "greater_than"
+          value: 40
+
+    decision:
+      action: "advise_against"
+      message: "Avoid cycling under these wind conditions and postpone the ride until winds decrease."
+
+    explanation: "Wind speed exceeds the defined 40 km/h threshold for cycling."
+
+  - id: "SOP-EXERCISE-UV-01"
+    name: "Outdoor Exercise During High UV"
+    category: "outdoor_exercise"
+    severity: "high"
+    priority: 90
+
+    applies_when:
+      all:
+        - field: "activity"
+          operator: "in"
+          value:
+            - "running"
+            - "outdoor_exercise"
+            - "walking"
+            - "cycling"
+
+        - field: "weather.uv_index"
+          operator: "greater_than_or_equal"
+          value: 8
+
+        - field: "local_hour"
+          operator: "between"
+          value:
+            min: 11
+            max: 16
+
+    decision:
+      action: "advise_against"
+      message: "Avoid unprotected outdoor exercise during this high-UV period. Consider moving the activity to early morning or evening and use appropriate sun protection."
+
+    explanation: "UV index is at least 8 during the defined high-UV period."
+
+  - id: "SOP-HIKING-RAIN-01"
+    name: "Hiking During Likely Rain"
+    category: "outdoor_exercise"
+    severity: "high"
+    priority: 80
+
+    applies_when:
+      all:
+        - field: "activity"
+          operator: "equals"
+          value: "hiking"
+
+        - field: "weather.precipitation_probability"
+          operator: "greater_than_or_equal"
+          value: 70
+
+        - field: "weather.precipitation_mm"
+          operator: "greater_than"
+          value: 0
+
+    decision:
+      action: "advise_against"
+      message: "Consider postponing the hike because rain is currently occurring and there is a high probability of precipitation."
+
+    explanation: "Rain is occurring and precipitation probability is at least 70%."
+
+  # ============================================================
+  # CATEGORY: TRAVEL & COMMUTING
+  # ============================================================
+
+  - id: "SOP-TWOWHEELER-WIND-01"
+    name: "Two-Wheeler Travel in High Winds"
+    category: "travel"
+    severity: "high"
+    priority: 95
+
+    applies_when:
+      all:
+        - field: "activity"
+          operator: "equals"
+          value: "two-wheeler travel"
+
+        - field: "weather.wind_speed_kmh"
+          operator: "greater_than"
+          value: 40
+
+    decision:
+      action: "advise_against"
+      message: "Avoid two-wheeler travel under these wind conditions where practical and consider delaying the trip until winds decrease."
+
+    explanation: "Wind speed exceeds the defined 40 km/h threshold for two-wheeler travel."
+
+  - id: "SOP-TRAVEL-RAIN-01"
+    name: "Travel During High Rain Probability"
+    category: "travel"
+    severity: "moderate"
+    priority: 60
+
+    applies_when:
+      all:
+        - field: "activity"
+          operator: "equals"
+          value: "travel"
+
+        - field: "weather.precipitation_probability"
+          operator: "greater_than_or_equal"
+          value: 70
+
+    decision:
+      action: "caution"
+      message: "Weather-related delays may be possible. Check current weather alerts and local travel conditions before departure."
+
+    explanation: "The probability of precipitation is at least 70%."
+
+  - id: "SOP-COMMUTE-RAIN-01"
+    name: "Outdoor Commute During Heavy Rain"
+    category: "travel"
+    severity: "high"
+    priority: 85
+
+    applies_when:
+      all:
+        - field: "activity"
+          operator: "equals"
+          value: "outdoor_commute"
+
+        - field: "weather.precipitation_mm"
+          operator: "greater_than"
+          value: 5
+
+    decision:
+      action: "advise_against"
+      message: "Consider postponing the outdoor commute where practical because significant precipitation is currently occurring."
+
+    explanation: "Current precipitation exceeds 5 mm."
+
+  # ============================================================
+  # CATEGORY: FAMILY & VULNERABLE GROUPS
+  # ============================================================
+
+  - id: "SOP-CHILD-UV-01"
+    name: "Child Outdoor Activity During High UV"
+    category: "vulnerable_groups"
+    severity: "high"
+    priority: 92
+
+    applies_when:
+      all:
+        - field: "group"
+          operator: "equals"
+          value: "child"
+
+        - field: "outdoor_activity"
+          operator: "equals"
+          value: true
+
+        - field: "weather.uv_index"
+          operator: "greater_than_or_equal"
+          value: 8
+
+        - field: "local_hour"
+          operator: "between"
+          value:
+            min: 11
+            max: 16
+
+    decision:
+      action: "advise_against"
+      message: "Avoid prolonged outdoor activity during this high-UV period or move the activity to a lower-UV period, with appropriate sun protection."
+
+    explanation: "The person is a child and the UV index is at least 8 during the defined high-UV period."
+
+  - id: "SOP-ELDERLY-HEAT-01"
+    name: "Elderly Person During Extreme Heat"
+    category: "vulnerable_groups"
+    severity: "high"
+    priority: 88
+
+    applies_when:
+      all:
+        - field: "group"
+          operator: "equals"
+          value: "elderly"
+
+        - field: "outdoor_activity"
+          operator: "equals"
+          value: true
+
+        - field: "weather.temperature_c"
+          operator: "greater_than_or_equal"
+          value: 38
+
+    decision:
+      action: "advise_against"
+      message: "Postpone non-essential outdoor activity during these hot conditions where practical and consider a cooler period."
+
+    explanation: "Temperature is at least 38°C for an outdoor activity involving an elderly person."
+
+  - id: "SOP-PET-HEAT-01"
+    name: "Pet Outdoor Activity During Extreme Heat"
+    category: "vulnerable_groups"
+    severity: "high"
+    priority: 87
+
+    applies_when:
+      all:
+        - field: "group"
+          operator: "equals"
+          value: "pet"
+
+        - field: "outdoor_activity"
+          operator: "equals"
+          value: true
+
+        - field: "weather.temperature_c"
+          operator: "greater_than_or_equal"
+          value: 35
+
+    decision:
+      action: "advise_against"
+      message: "Avoid prolonged outdoor activity during these hot conditions and consider a cooler period."
+
+    explanation: "Temperature is at least 35°C for an outdoor activity involving a pet."
+
+  # ============================================================
+  # CATEGORY: GENERAL OUTDOOR ACTIVITIES
+  # ============================================================
+
+  - id: "SOP-OUTDOOR-SEVERE-01"
+    name: "Severe Weather for Outdoor Activities"
+    category: "general_outdoor"
+    severity: "critical"
+    priority: 200
+
+    applies_when:
+      all:
+        - field: "outdoor_activity"
+          operator: "equals"
+          value: true
+
+      any:
+        - all:
+            - field: "weather.precipitation_probability"
+              operator: "greater_than_or_equal"
+              value: 80
+
+            - field: "weather.precipitation_mm"
+              operator: "greater_than"
+              value: 5
+
+        - field: "weather.wind_speed_kmh"
+          operator: "greater_than"
+          value: 50
+
+    decision:
+      action: "avoid"
+      message: "Avoid the outdoor activity under these severe weather conditions and postpone it until conditions improve."
+
+    explanation: "The current weather meets the defined severe-weather conditions for outdoor activities."
+
+  - id: "SOP-PICNIC-GENERAL-01"
+    name: "Generally Suitable Picnic Conditions"
+    category: "general_outdoor"
+    severity: "low"
+    priority: 40
+
+    applies_when:
+      all:
+        - field: "activity"
+          operator: "equals"
+          value: "picnic"
+
+        - field: "weather.temperature_c"
+          operator: "between"
+          value:
+            min: 18
+            max: 32
+
+        - field: "weather.precipitation_probability"
+          operator: "less_than"
+          value: 40
+
+        - field: "weather.wind_speed_kmh"
+          operator: "less_than"
+          value: 30
+
+        - field: "weather.uv_index"
+          operator: "less_than"
+          value: 8
+
+    decision:
+      action: "suitable"
+      message: "The available weather conditions are generally suitable for a picnic."
+
+    explanation: "Temperature, precipitation probability, wind speed, and UV index are all within the defined picnic conditions."
+
+  - id: "SOP-OUTDOOR-HEAT-01"
+    name: "Outdoor Activity During Moderate Heat"
+    category: "general_outdoor"
+    severity: "moderate"
+    priority: 50
+
+    applies_when:
+      all:
+        - field: "outdoor_activity"
+          operator: "equals"
+          value: true
+
+        - field: "weather.temperature_c"
+          operator: "between"
+          value:
+            min: 32
+            max: 37.99
+
+    decision:
+      action: "caution"
+      message: "Consider moving the activity to a cooler part of the day and taking appropriate breaks and hydration precautions."
+
+    explanation: "Temperature is between 32°C and 37.99°C."
